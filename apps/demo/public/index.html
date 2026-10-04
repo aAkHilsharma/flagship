@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fieldwork — Flagship demo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f1efe8;
+        color: #1c302a;
+        font:
+          16px Georgia,
+          serif;
+      }
+      header {
+        padding: 25px 6vw;
+        border-bottom: 1px solid #d1d5cb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header strong {
+        font-size: 26px;
+      }
+      small,
+      label,
+      select,
+      button,
+      .mono {
+        font-family: ui-monospace, monospace;
+      }
+      .pill {
+        background: #dae7d9;
+        padding: 9px 13px;
+        border-radius: 30px;
+        font:
+          12px ui-monospace,
+          monospace;
+      }
+      main {
+        max-width: 1080px;
+        margin: 70px auto;
+        padding: 0 25px;
+      }
+      h1 {
+        font-size: 56px;
+        font-weight: normal;
+        letter-spacing: -2px;
+        margin: 15px 0 35px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 36px;
+      }
+      .card {
+        padding: 30px;
+        background: #fffdf6;
+        border: 1px solid #d6dacd;
+        border-radius: 10px;
+      }
+      .new {
+        border: 2px solid #277557;
+        background: #eaf2e6;
+      }
+      h2 {
+        font-weight: normal;
+        font-size: 28px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 16px 0;
+        border-bottom: 1px solid #ddd;
+      }
+      button,
+      select {
+        padding: 12px;
+        border: 1px solid #bbc5b5;
+        border-radius: 5px;
+        background: white;
+        color: #213b30;
+      }
+      button {
+        background: #213b30;
+        color: white;
+        width: 100%;
+        margin-top: 20px;
+        cursor: pointer;
+      }
+      .bar {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 25px;
+      }
+      .note {
+        font:
+          13px/1.8 ui-monospace,
+          monospace;
+        color: #5b6e61;
+        margin-top: 24px;
+      }
+      #error {
+        color: #9b302c;
+      }
+      @media (max-width: 700px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: 40px;
+        }
+        .bar {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header><strong>Fieldwork.</strong><span class="pill">FLAGSHIP / LIVE DEMO</span></header>
+    <main>
+      <small>THE EVERYDAY COLLECTION</small>
+      <h1>A checkout. Two experiences.</h1>
+      <div class="bar">
+        <label for="persona">Demo account</label
+        ><select id="persona">
+          <option value="employee">Anika · Employee · India</option>
+          <option value="premium">Jamie · Premium · UK</option>
+          <option value="standard">Sam · Free · India</option></select
+        ><span class="pill" id="status">Connecting…</span>
+      </div>
+      <p id="error" role="alert"></p>
+      <div class="layout">
+        <section class="card" id="checkout">
+          <small id="variant"></small>
+          <h2 id="title"></h2>
+          <p id="description"></p>
+          <div class="row"><span>Canvas weekend bag</span><span>₹2,400</span></div>
+          <div class="row"><span>Shipping</span><span>Free</span></div>
+          <div class="row"><strong>Total</strong><strong>₹2,400</strong></div>
+          <button id="purchase">Continue</button>
+          <p id="receipt" aria-live="polite"></p>
+        </section>
+        <aside class="card">
+          <small>BEHIND THE CHECK</small>
+          <h2>Same deployment.<br />Different experience.</h2>
+          <p>
+            Change the <code>new-checkout</code> flag in Flagship. This application receives
+            configuration updates and evaluates the signed-in account on its own backend.
+          </p>
+          <div class="note" id="details"></div>
+          <p class="note">
+            Persona switching is a demo login shortcut. User attributes and SDK credentials stay on
+            the server. No payment is taken.
+          </p>
+        </aside>
+      </div>
+    </main>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let running = false;
+      async function refresh() {
+        if (running) return;
+        running = true;
+        try {
+          const r = await fetch('/api/checkout');
+          if (!r.ok) throw Error('Demo backend unavailable');
+          const d = await r.json();
+          $('error').textContent = '';
+          $('checkout').classList.toggle('new', d.enabled);
+          $('variant').textContent = d.enabled ? 'NEW CHECKOUT / ENABLED' : 'CLASSIC CHECKOUT';
+          $('title').textContent = d.enabled ? 'Ready when you are.' : 'Your order summary';
+          $('description').textContent = d.enabled
+            ? 'Your saved details are ready. Finish in a single step.'
+            : 'Review your bag, then continue to delivery and payment.';
+          $('purchase').textContent = d.enabled ? 'Place demo order →' : 'Continue to delivery →';
+          $('status').textContent = d.sdk.connected
+            ? '● Live updates'
+            : d.sdk.ready
+              ? '● Using cached configuration'
+              : '● Using application default';
+          $('details').textContent =
+            'ACCOUNT  ' +
+            d.user.name +
+            '\nFLAG  new-checkout\nRESULT  ' +
+            d.enabled +
+            '\nREASON  ' +
+            d.reason +
+            '\nREVISION  ' +
+            (d.sdk.revision ?? 'none');
+          $('details').style.whiteSpace = 'pre-line';
+        } catch (e) {
+          $('error').textContent = e.message;
+        } finally {
+          running = false;
+        }
+      }
+      $('persona').onchange = async (e) => {
+        await fetch('/demo-login/' + e.target.value, { method: 'POST' });
+        $('receipt').textContent = '';
+        await refresh();
+      };
+      $('purchase').onclick = () => {
+        $('receipt').textContent = 'Demo only — no order or charge was created.';
+      };
+      refresh();
+      setInterval(refresh, 1500);
+    </script>
+  </body>
+</html>

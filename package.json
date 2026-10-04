@@ -1,0 +1,44 @@
+{
+  "name": "flagship",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,dashboard,demo \"npm run dev -w @flagship/api\" \"npm run dev -w @flagship/dashboard\" \"npm run dev -w @flagship/demo\"",
+    "build": "npm run build -w @flagship/contracts && npm run build -w @flagship/evaluator && npm run build -w @flagship/sdk && npm run build -w @flagship/api && npm run build -w @flagship/dashboard && npm run build -w @flagship/demo",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "npm run migrate -w @flagship/api",
+    "db:seed": "npm run seed -w @flagship/api",
+    "infra:up": "docker compose --project-directory . -f infra/compose.yaml up -d --wait",
+    "infra:down": "docker compose --project-directory . -f infra/compose.yaml down",
+    "predev": "npm run build -w @flagship/sdk",
+    "setup": "npm run infra:up && npm run build && npm run db:seed",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "app:assign": "tsx apps/api/src/assign-application.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.28.2",
+    "prettier": "^3.9.9",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "^0.28.2"
+    }
+  }
+}

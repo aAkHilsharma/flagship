@@ -1,0 +1,25 @@
+name: flagship
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: flagship
+      POSTGRES_PASSWORD: flagship_local
+      POSTGRES_DB: flagship
+    ports: ['127.0.0.1:55432:5432']
+    volumes: ['postgres-data:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U flagship']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    ports: ['127.0.0.1:${REDIS_PORT:-56379}:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  postgres-data:
