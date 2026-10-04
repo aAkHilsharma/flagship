@@ -2773,3 +2773,57 @@ input[type='checkbox'] {
   padding-left: 12px;
   padding-right: 40px;
 }
+/* Primary navigation follows the compact application/flags sidebar. */
+.sidebar {
+  background: #fff;
+}
+.primary-navigation {
+  display: grid;
+  gap: 4px;
+}
+.primary-navigation .nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 11px 20px 11px 26px;
+  margin: 0;
+  border: 0;
+  border-radius: 6px;
+  color: #202033;
+  font-size: 15px;
+  font-weight: 450;
+  line-height: 24px;
+}
+.primary-navigation .nav svg {
+  flex-shrink: 0;
+  color: #85838f;
+}
+.primary-navigation .nav:hover {
+  background: #f7f6fc;
+}
+.primary-navigation .nav.active {
+  background: #f4f2ff;
+  color: #202033;
+  font-weight: 600;
+}
+.primary-navigation .nav.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  border-radius: 6px 0 0 6px;
+  background: #7160f5;
+}
+.application-identity select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  background-color: white;
+  font: inherit;
+  color: inherit;
+}

@@ -52,6 +52,8 @@ const isNew = (flag: Flag) => flag.version === 1 && !flag.config.enabled && !fla
 export function App({ user }: { user: User }) {
   const api = useApi();
   const [page, setPage] = useState<Page>('applications');
+  const [insideApplication, setInsideApplication] = useState(false);
+  const flagsOverview = page === 'flags' && !insideApplication;
   const [applications, setApplications] = useState<Application[]>([]),
     [appId, setAppId] = useState(''),
     [flags, setFlags] = useState<Flag[]>([]),
@@ -68,7 +70,6 @@ export function App({ user }: { user: User }) {
     [editorTab, setEditorTab] = useState('Targeting'),
     [secret, setSecret] = useState('');
   const creatingFlag = modal?.kind === 'flag';
-  const detailOpen = creatingFlag || !!selected;
   const admin = user?.role === 'admin',
     canToggle = user?.role !== 'auditor';
   const current = applications.find((a) => a.id === appId);
@@ -86,7 +87,14 @@ export function App({ user }: { user: User }) {
     const sequence = ++loadSequence.current;
     setLoading(true);
     try {
-      if (appId && (page === 'flags' || page === 'features')) {
+      if (flagsOverview) {
+        const rows = await Promise.all(
+          applications.map((a) => api<Flag[]>('/flags?applicationId=' + a.id)),
+        );
+        if (sequence !== loadSequence.current) return;
+        setFlags(rows.flat());
+        setFeatures([]);
+      } else if (appId && (page === 'flags' || page === 'features')) {
         const [f, ft] = await Promise.all([
           api<Flag[]>('/flags?applicationId=' + appId),
           api<Feature[]>('/features?applicationId=' + appId),
@@ -108,7 +116,7 @@ export function App({ user }: { user: User }) {
     } finally {
       if (sequence === loadSequence.current) setLoading(false);
     }
-  }, [api, appId, page, user]);
+  }, [api, appId, page, user, applications, flagsOverview]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -183,6 +191,7 @@ export function App({ user }: { user: User }) {
       setModal(null);
       await Promise.all([refreshApps(), load()]);
       if (kind === 'application' && !item && result.id) {
+        setInsideApplication(true);
         setAppId(result.id);
         setPage('flags');
       }
@@ -191,11 +200,6 @@ export function App({ user }: { user: User }) {
       setError((e as Error).message);
     }
   }
-  const nav: [Page, string, typeof FlagIcon][] = [
-    ['flags', 'Feature flags', FlagIcon],
-    ['audit', 'Activity', History],
-    ['settings', 'Settings', Settings2],
-  ];
   const titles: Record<Page, string> = {
     applications: 'Applications',
     settings: 'Settings',
@@ -211,7 +215,7 @@ export function App({ user }: { user: User }) {
   }
   const visible = flags.filter(
     (f) =>
-      f.applicationId === appId &&
+      (flagsOverview || f.applicationId === appId) &&
       (filter === 'All flags' || status(f) === filter || (filter === 'New' && isNew(f))) &&
       `${f.name} ${f.key}`.toLowerCase().includes(search.toLowerCase()),
   );
@@ -229,46 +233,41 @@ export function App({ user }: { user: User }) {
     admin &&
     createKind &&
     (page === 'applications' || !!appId) &&
-    (page !== 'flags' || features.length > 0);
+    (page !== 'flags' || (insideApplication && features.length > 0));
   return (
     <div className="shell">
       <aside className="sidebar">
         <Brand />
-        <button
-          className={
-            page === 'applications' ? 'nav active applications-nav' : 'nav applications-nav'
-          }
-          onClick={() => {
-            setSelected(null);
-            setModal(null);
-            setPage('applications');
-          }}
-        >
-          <Grid2X2 size={19} />
-          Applications<span className="nav-count">{applications.length}</span>
-        </button>
-        {!detailOpen && page !== 'applications' && (
-          <nav className="application-nav">
-            {nav
-              .filter(([id]) => id !== 'credentials' || admin)
-              .map(([id, label, Icon]) => (
-                <button
-                  key={id}
-                  className={page === id ? 'nav active' : 'nav'}
-                  onClick={() => {
-                    setSelected(null);
-                    setModal(null);
-                    setPage(id);
-                    setError('');
-                  }}
-                >
-                  <Icon size={18} />
-                  {label}
-                  {id === 'flags' && <span className="nav-count">{flags.length}</span>}
-                </button>
-              ))}
-          </nav>
-        )}
+        <nav className="primary-navigation" aria-label="Main navigation">
+          <button
+            className={!flagsOverview ? 'nav active' : 'nav'}
+            aria-current={!flagsOverview ? 'page' : undefined}
+            onClick={() => {
+              setSelected(null);
+              setModal(null);
+              setInsideApplication(false);
+              setPage('applications');
+              setError('');
+            }}
+          >
+            <Grid2X2 size={22} />
+            <span>Applications</span>
+          </button>
+          <button
+            className={flagsOverview ? 'nav active' : 'nav'}
+            aria-current={flagsOverview ? 'page' : undefined}
+            onClick={() => {
+              setSelected(null);
+              setModal(null);
+              setInsideApplication(false);
+              setPage('flags');
+              setError('');
+            }}
+          >
+            <FlagIcon size={22} />
+            <span>Flags</span>
+          </button>
+        </nav>
         <div className="account-actions">
           <OrganizationSwitcher
             hidePersonal
@@ -290,21 +289,28 @@ export function App({ user }: { user: User }) {
             >
               Applications
             </button>
-            {page !== 'applications' && (
+            {flagsOverview ? (
               <>
                 <ChevronRight size={14} />
-                <button
-                  onClick={() => {
-                    setSelected(null);
-                    setModal(null);
-                    setPage('flags');
-                  }}
-                >
-                  {current?.name ?? 'Organization'}
-                </button>
-                <ChevronRight size={14} />
-                <strong>{creatingFlag ? 'Create flag' : (selected?.name ?? titles[page])}</strong>
+                <strong>{selected?.name ?? 'Flags'}</strong>
               </>
+            ) : (
+              page !== 'applications' && (
+                <>
+                  <ChevronRight size={14} />
+                  <button
+                    onClick={() => {
+                      setSelected(null);
+                      setModal(null);
+                      setPage('flags');
+                    }}
+                  >
+                    {current?.name ?? 'Organization'}
+                  </button>
+                  <ChevronRight size={14} />
+                  <strong>{creatingFlag ? 'Create flag' : (selected?.name ?? titles[page])}</strong>
+                </>
+              )
             )}
           </div>
         </header>
@@ -334,25 +340,39 @@ export function App({ user }: { user: User }) {
             />
           ) : (
             <>
-              {page === 'flags' && current && (
+              {page === 'flags' && insideApplication && current && (
                 <div className="application-identity">
                   <span className="app-monogram">{current.name[0].toUpperCase()}</span>
                   <div>
-                    <strong>{current.name}</strong>
+                    {applications.length > 1 ? (
+                      <select
+                        aria-label="Application"
+                        value={appId}
+                        onChange={(e) => setAppId(e.target.value)}
+                      >
+                        {applications.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <strong>{current.name}</strong>
+                    )}
                     <span>Application</span>
                   </div>
                 </div>
               )}
               <div className="page-heading">
                 <div>
-                  <h1>{titles[page]}</h1>
+                  <h1>{flagsOverview ? 'Flags' : titles[page]}</h1>
                   {page === 'flags' && <p>Control what ships. Choose who sees it.</p>}
                   {page === 'applications' && (
                     <p>Choose an application to manage its feature flags.</p>
                   )}
                 </div>
                 <div className="heading-actions">
-                  {current && page !== 'applications' && (
+                  {current && insideApplication && page !== 'applications' && (
                     <Menu label="Application actions">
                       {admin && (
                         <button onClick={() => setModal({ kind: 'application', item: current })}>
@@ -367,6 +387,14 @@ export function App({ user }: { user: User }) {
                       <button onClick={() => setPage('features')}>
                         <Layers size={16} />
                         Feature groups
+                      </button>
+                      <button onClick={() => setPage('audit')}>
+                        <History size={16} />
+                        Activity
+                      </button>
+                      <button onClick={() => setPage('settings')}>
+                        <Settings2 size={16} />
+                        Settings
                       </button>
                       {admin && (
                         <button onClick={() => setPage('credentials')}>
@@ -598,12 +626,14 @@ export function App({ user }: { user: User }) {
                         <h3>{!flags.length ? 'No flags yet' : 'No flags match.'}</h3>
                         <p>
                           {!appId
-                            ? 'Create an application using the switcher.'
-                            : !features.length
-                              ? 'Create a feature group to organize your first flags.'
-                              : 'Create a flag or adjust your filters.'}
+                            ? 'Open Applications to create an application, then add its flags.'
+                            : flagsOverview
+                              ? 'Open an application from Applications to create its first flag.'
+                              : !features.length
+                                ? 'Create a feature group to organize your first flags.'
+                                : 'Create a flag or adjust your filters.'}
                         </p>
-                        {admin && !features.length && appId && (
+                        {admin && insideApplication && !features.length && appId && (
                           <button
                             className="secondary"
                             onClick={() => setModal({ kind: 'feature' })}
@@ -638,6 +668,7 @@ export function App({ user }: { user: User }) {
                   applications={applications}
                   admin={admin}
                   onOpen={(id) => {
+                    setInsideApplication(true);
                     setAppId(id);
                     setPage('flags');
                   }}

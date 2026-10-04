@@ -76,9 +76,9 @@ function AuthGate() {
           <div className="rollout-preview" aria-label="Example rollout, 20 percent">
             <span className="preview-label">EXAMPLE ROLLOUT</span>
             <div className="preview-row">
-              <span className="app-monogram">F</span>
+              <span className="app-monogram">A</span>
               <div>
-                <strong>Fieldwork</strong>
+                <strong>Your application</strong>
                 <small>Application</small>
               </div>
               <span className="preview-divider" />

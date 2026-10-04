@@ -7,16 +7,15 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,dashboard,demo \"npm run dev -w @flagship/api\" \"npm run dev -w @flagship/dashboard\" \"npm run dev -w @flagship/demo\"",
-    "build": "npm run build -w @flagship/contracts && npm run build -w @flagship/evaluator && npm run build -w @flagship/sdk && npm run build -w @flagship/api && npm run build -w @flagship/dashboard && npm run build -w @flagship/demo",
+    "dev": "concurrently -k -n api,dashboard \"npm run dev -w @flagship/api\" \"npm run dev -w @flagship/dashboard\"",
+    "build": "npm run build -w @flagship/contracts && npm run build -w @flagship/evaluator && npm run build -w @flagship/sdk && npm run build -w @flagship/api && npm run build -w @flagship/dashboard",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate": "npm run migrate -w @flagship/api",
-    "db:seed": "npm run seed -w @flagship/api",
     "infra:up": "docker compose --project-directory . -f infra/compose.yaml up -d --wait",
     "infra:down": "docker compose --project-directory . -f infra/compose.yaml down",
     "predev": "npm run build -w @flagship/sdk",
-    "setup": "npm run infra:up && npm run build && npm run db:seed",
+    "setup": "npm run infra:up && npm run build && npm run db:migrate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "app:assign": "tsx apps/api/src/assign-application.ts"
